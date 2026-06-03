@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "node scripts/patch-netlify-websocket.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
@@ -13,7 +14,8 @@
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@netlify/functions": "^3.1.0",
@@ -21,6 +23,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/ws": "^8.5.13",
     "typescript": "^5.7.2"
   }
 }
