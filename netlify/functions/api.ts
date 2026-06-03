@@ -107,10 +107,12 @@ function supabase() {
   });
 }
 
-async function unwrap<T>(request: PromiseLike<{ data: T; error: { message: string } | null }>) {
+async function unwrap<T>(
+  request: PromiseLike<{ data: T | null; error: { message: string } | null }>
+): Promise<T> {
   const { data, error } = await request;
   if (error) fail(error.message);
-  return data;
+  return data as T;
 }
 
 function parsePath(request: Request) {
