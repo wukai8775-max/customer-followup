@@ -1,21 +1,10 @@
-[build]
-command = "npm run build"
-publish = "dist"
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
-[build.environment]
-NODE_VERSION = "20"
-
-[functions]
-node_bundler = "esbuild"
-
-[[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
-
-[[headers]]
-for = "/*"
-[headers.values]
-X-Frame-Options = "DENY"
-X-Content-Type-Options = "nosniff"
-Referrer-Policy = "strict-origin-when-cross-origin"
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: "0.0.0.0",
+    port: 5173
+  }
+});
