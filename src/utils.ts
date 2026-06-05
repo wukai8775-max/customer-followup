@@ -19,9 +19,9 @@ export function formatDate(value: string | null | undefined) {
 }
 
 export function formatMoney(value: number) {
-  return new Intl.NumberFormat("zh-CN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "CNY",
+    currency: "USD",
     maximumFractionDigits: 2
   }).format(value || 0);
 }
