@@ -83,6 +83,14 @@ source = replaceOnce(
 
 writeFileSync(apiPath, source);
 
+const utilsPath = new URL("../src/utils.ts", import.meta.url);
+let utilsSource = readFileSync(utilsPath, "utf8");
+
+utilsSource = utilsSource.replace('new Intl.NumberFormat("zh-CN"', 'new Intl.NumberFormat("en-US"');
+utilsSource = utilsSource.replace('currency: "CNY"', 'currency: "USD"');
+
+writeFileSync(utilsPath, utilsSource);
+
 const appPath = new URL("../src/App.tsx", import.meta.url);
 let appSource = readFileSync(appPath, "utf8");
 
@@ -134,12 +142,88 @@ appSource = replaceOnce(
             <option value="">默认排序：最近更新</option>
             <option value="followup_asc">回访时间：最近优先</option>
             <option value="followup_desc">回访时间：最晚优先</option>
-            <option value="amount_desc">金额：高到低</option>
-            <option value="amount_asc">金额：低到高</option>
+            <option value="amount_desc">金额（美元）：高到低</option>
+            <option value="amount_asc">金额（美元）：低到高</option>
           </select>
         </div>
         <button className="primary-button" onClick={onAdd} disabled={customers.length === 0}>`,
   "order sort select"
 );
+
+if (!appSource.includes("const [customerSort, setCustomerSort]")) {
+  appSource = replaceOnce(
+    appSource,
+    '  const [search, setSearch] = useState("");',
+    '  const [search, setSearch] = useState("");\n  const [customerSort, setCustomerSort] = useState("");',
+    "customer sort state"
+  );
+
+  appSource = replaceOnce(
+    appSource,
+    `  const visibleCustomers = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return customers;
+    return customers.filter((customer) =>
+      [customer.name, customer.contact, customer.country, customer.source, customer.tags.join(","), customer.notes]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword)
+    );
+  }, [customers, search]);`,
+    `  const visibleCustomers = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    const filtered = keyword
+      ? customers.filter((customer) =>
+          [customer.name, customer.contact, customer.country, customer.source, customer.tags.join(","), customer.notes]
+            .join(" ")
+            .toLowerCase()
+            .includes(keyword)
+        )
+      : customers;
+
+    if (customerSort !== "created_asc") return filtered;
+
+    return [...filtered].sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      const aMissing = !Number.isFinite(aTime);
+      const bMissing = !Number.isFinite(bTime);
+      if (aMissing && bMissing) return a.name.localeCompare(b.name, "zh-CN") || a.id.localeCompare(b.id);
+      if (aMissing) return 1;
+      if (bMissing) return -1;
+      return aTime - bTime || a.name.localeCompare(b.name, "zh-CN") || a.id.localeCompare(b.id);
+    });
+  }, [customers, search, customerSort]);`,
+    "customer sort memo"
+  );
+
+  appSource = replaceOnce(
+    appSource,
+    `        <label className="search-box">
+          <Search size={17} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索客户" />
+        </label>
+        <button className="primary-button" onClick={onAdd}>`,
+    `        <label className="search-box">
+          <Search size={17} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索客户" />
+        </label>
+        <select value={customerSort} onChange={(event) => setCustomerSort(event.target.value)} aria-label="客户排序">
+          <option value="">默认排序：最近更新</option>
+          <option value="created_asc">创建日期：最早优先</option>
+        </select>
+        <button className="primary-button" onClick={onAdd}>`,
+    "customer sort select"
+  );
+}
+
+appSource = replaceOnce(appSource, "                <th>订单数</th>", "                <th>订单数</th>\n                <th>创建日期</th>", "customer created header");
+appSource = replaceOnce(appSource, "                  <td>{customer.ordersCount}</td>", "                  <td>{customer.ordersCount}</td>\n                  <td>{formatDate(customer.createdAt)}</td>", "customer created cell");
+appSource = appSource.replace("金额：高到低", "金额（美元）：高到低");
+appSource = appSource.replace("金额：低到高", "金额（美元）：低到高");
+appSource = appSource.replace("<th>金额</th>", "<th>金额（美元）</th>");
+appSource = appSource.replace('"本月成交金额"', '"本月成交金额（美元）"');
+appSource = appSource.replace('"待支付金额"', '"待支付金额（美元）"');
+appSource = appSource.replace("          订单金额\n", "          订单金额（美元）\n");
 
 writeFileSync(appPath, appSource);
