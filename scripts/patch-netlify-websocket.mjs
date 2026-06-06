@@ -55,6 +55,17 @@ function compareFollowUp(a: Order, b: Order, ascending: boolean) {
   return diff || compareUpdatedDesc(a, b);
 }
 
+function compareLastContact(a: Order, b: Order) {
+  const aTime = dateTime(a.lastContactAt);
+  const bTime = dateTime(b.lastContactAt);
+  const aMissing = !Number.isFinite(aTime);
+  const bMissing = !Number.isFinite(bTime);
+  if (aMissing && bMissing) return compareUpdatedDesc(a, b);
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+  return aTime - bTime || compareUpdatedDesc(a, b);
+}
+
 function amountValue(order: Order) {
   const amount = Number(order.amount || 0);
   return Number.isFinite(amount) ? amount : 0;
@@ -62,6 +73,7 @@ function amountValue(order: Order) {
 
 function sortOrders(orders: Order[], sort: string | undefined) {
   const sorted = [...orders];
+  if (sort === "last_contact_asc") return sorted.sort(compareLastContact);
   if (sort === "followup_asc") return sorted.sort((a, b) => compareFollowUp(a, b, true));
   if (sort === "followup_desc") return sorted.sort((a, b) => compareFollowUp(a, b, false));
   if (sort === "amount_desc") return sorted.sort((a, b) => amountValue(b) - amountValue(a) || compareUpdatedDesc(a, b));
@@ -73,6 +85,40 @@ function applyOrderFilters(orders: Order[], query: Query) {`,
     "order sort helpers"
   );
 }
+
+if (!source.includes("function compareLastContact(")) {
+  source = replaceOnce(
+    source,
+    "function amountValue(order: Order) {",
+    `function compareLastContact(a: Order, b: Order) {
+  const aTime = dateTime(a.lastContactAt);
+  const bTime = dateTime(b.lastContactAt);
+  const aMissing = !Number.isFinite(aTime);
+  const bMissing = !Number.isFinite(bTime);
+  if (aMissing && bMissing) return compareUpdatedDesc(a, b);
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+  return aTime - bTime || compareUpdatedDesc(a, b);
+}
+
+function amountValue(order: Order) {`,
+    "last contact comparator"
+  );
+}
+
+source = replaceOnce(
+  source,
+  '  if (sort === "followup_asc") return sorted.sort((a, b) => compareFollowUp(a, b, true));',
+  '  if (sort === "last_contact_asc") return sorted.sort(compareLastContact);\n  if (sort === "followup_asc") return sorted.sort((a, b) => compareFollowUp(a, b, true));',
+  "last contact sort branch"
+);
+
+source = replaceOnce(
+  source,
+  "  if (query.status) filtered = filtered.filter((order) => order.orderStatus === query.status);\n  if (query.country) filtered = filtered.filter((order) => order.country === query.country);",
+  "  if (query.status) filtered = filtered.filter((order) => order.orderStatus === query.status);\n  if (query.customerName?.trim()) {\n    const customerName = query.customerName.trim().toLowerCase();\n    filtered = filtered.filter((order) => order.customerName.toLowerCase().includes(customerName));\n  }\n  if (query.country) filtered = filtered.filter((order) => order.country === query.country);",
+  "customer name order filter"
+);
 
 source = replaceOnce(
   source,
@@ -97,15 +143,15 @@ let appSource = readFileSync(appPath, "utf8");
 appSource = replaceOnce(
   appSource,
   '    followupTo: ""\n  });',
-  '    followupTo: "",\n    sort: ""\n  });',
-  "order filter sort state"
+  '    followupTo: "",\n    customerName: "",\n    sort: ""\n  });',
+  "order filter customer search and sort state"
 );
 
 appSource = replaceOnce(
   appSource,
   '    if (orderFilters.followupTo) params.set("followupTo", `${orderFilters.followupTo}T23:59`);\n    return params.toString();',
-  '    if (orderFilters.followupTo) params.set("followupTo", `${orderFilters.followupTo}T23:59`);\n    if (orderFilters.sort) params.set("sort", orderFilters.sort);\n    return params.toString();',
-  "order sort query param"
+  '    if (orderFilters.followupTo) params.set("followupTo", `${orderFilters.followupTo}T23:59`);\n    if (orderFilters.customerName.trim()) params.set("customerName", orderFilters.customerName.trim());\n    if (orderFilters.sort) params.set("sort", orderFilters.sort);\n    return params.toString();',
+  "order customer search and sort query params"
 );
 
 appSource = replaceOnce(
@@ -120,6 +166,71 @@ appSource = replaceOnce(
   "    followupFrom: string;\n    followupTo: string;\n  }) => void;",
   "    followupFrom: string;\n    followupTo: string;\n    sort: string;\n  }) => void;",
   "order filter callback sort type"
+);
+
+if (!appSource.includes('customerName: ""')) {
+  appSource = replaceOnce(
+    appSource,
+    '    status: "",\n    country: ""',
+    '    status: "",\n    customerName: "",\n    country: ""',
+    "order filter customer search state"
+  );
+}
+
+if (!appSource.includes('params.set("customerName"')) {
+  appSource = replaceOnce(
+    appSource,
+    '    if (activePage === "orders" && orderFilters.status) params.set("status", orderFilters.status);\n    if (orderFilters.country)',
+    '    if (activePage === "orders" && orderFilters.status) params.set("status", orderFilters.status);\n    if (orderFilters.customerName.trim()) params.set("customerName", orderFilters.customerName.trim());\n    if (orderFilters.country)',
+    "order customer search query param"
+  );
+}
+
+appSource = appSource.replaceAll(
+  "    status: string;\n    country: string;",
+  "    status: string;\n    customerName: string;\n    country: string;"
+);
+
+if (!appSource.includes('placeholder="搜索客户姓名"')) {
+  appSource = replaceOnce(
+    appSource,
+    `        <div className="filter-grid">
+          {page === "orders" && (`,
+    `        <div className="filter-grid">
+          <label className="search-box">
+            <Search size={17} />
+            <input
+              value={filters.customerName}
+              onChange={(event) => onFiltersChange({ ...filters, customerName: event.target.value })}
+              placeholder="搜索客户姓名"
+            />
+          </label>
+          {page === "orders" && (`,
+    "order customer search input"
+  );
+}
+
+if (!appSource.includes('value="last_contact_asc"')) {
+  appSource = replaceOnce(
+    appSource,
+    '            <option value="">默认排序：最近更新</option>\n            <option value="followup_asc">',
+    '            <option value="">默认排序：最近更新</option>\n            <option value="last_contact_asc">最后联系时间：最早优先</option>\n            <option value="followup_asc">',
+    "last contact sort option"
+  );
+}
+
+appSource = replaceOnce(
+  appSource,
+  `              <td>
+                <strong>{order.customerName}</strong>
+                <small>{order.customerContact || "-"}</small>
+              </td>`,
+  `              <td>
+                <small>最后联系：{formatDate(order.lastContactAt)}</small>
+                <strong>{order.customerName}</strong>
+                <small>{order.customerContact || "-"}</small>
+              </td>`,
+  "order customer last contact display"
 );
 
 appSource = replaceOnce(
@@ -140,6 +251,7 @@ appSource = replaceOnce(
           </select>
           <select value={filters.sort} onChange={(event) => onFiltersChange({ ...filters, sort: event.target.value })}>
             <option value="">默认排序：最近更新</option>
+            <option value="last_contact_asc">最后联系时间：最早优先</option>
             <option value="followup_asc">回访时间：最近优先</option>
             <option value="followup_desc">回访时间：最晚优先</option>
             <option value="amount_desc">金额（美元）：高到低</option>
