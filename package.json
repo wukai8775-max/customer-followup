@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "prebuild": "node scripts/patch-netlify-websocket.mjs",
+    "prebuild": "node scripts/patch-netlify-websocket.mjs && node scripts/patch-customer-name-date-sort.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
