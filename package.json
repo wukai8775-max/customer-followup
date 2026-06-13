@@ -1,29 +1,8 @@
 {
-  "name": "customer-followup-manager",
+  "name": "customer-followup-offline-notice",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "prebuild": "node scripts/patch-netlify-websocket.mjs && node scripts/patch-customer-name-date-sort.mjs && node scripts/patch-statistics-metrics.mjs",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 0.0.0.0"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.0.0",
-    "lucide-react": "^0.468.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "vite": "^8.0.0",
-    "ws": "^8.18.0"
-  },
-  "devDependencies": {
-    "@netlify/functions": "^3.1.0",
-    "@vitejs/plugin-react": "^6.0.0",
-    "@types/node": "^22.10.2",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@types/ws": "^8.5.13",
-    "typescript": "^5.7.2"
+    "build": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('index.html','dist/index.html');\""
   }
 }
