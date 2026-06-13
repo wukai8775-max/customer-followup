@@ -82,6 +82,10 @@ export interface DashboardData {
 export interface StatisticsData {
   monthlyOrderCount: number;
   monthlyRevenue: number;
+  monthlyMaxOrderAmount: number;
+  monthlyMinOrderAmount: number;
+  paidOrderCount: number;
+  paidAverageOrderAmount: number;
   pendingPaymentAmount: number;
   logisticsExceptionOrderCount: number;
   signedNeedFollowupCount: number;
