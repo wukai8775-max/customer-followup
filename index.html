@@ -3,10 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>客户回访管理</title>
+    <title>客户档案已迁移到本地</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f4f7f9;
+        color: #102033;
+        font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      }
+      main {
+        width: min(680px, calc(100vw - 32px));
+        background: #fff;
+        border: 1px solid #d8e1ea;
+        border-radius: 10px;
+        padding: 32px;
+        box-shadow: 0 10px 24px rgba(16, 32, 51, .08);
+      }
+      h1 { margin: 0 0 12px; font-size: 28px; }
+      p { color: #52687f; line-height: 1.7; margin: 8px 0; }
+      .badge {
+        display: inline-flex;
+        margin-top: 16px;
+        border-radius: 999px;
+        background: #dff2eb;
+        color: #075c47;
+        padding: 8px 12px;
+        font-weight: 700;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <main>
+      <h1>客户档案已迁移到本地</h1>
+      <p>这个线上入口已经停用，不再提供客户数据读取、登录或同步功能。</p>
+      <p>请在本机使用本地版客户档案文件继续管理数据。</p>
+      <div class="badge">本地单机版使用中</div>
+    </main>
   </body>
 </html>
